@@ -34,3 +34,30 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# --- Machine Learning / YOLO ---
+*.pt
+runs/
+
+# --- Project Specific Data ---
+# Ignore contents of uploads/ and outputs/ but keep the folders
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+backend/outputs/videos/*
+!backend/outputs/videos/.gitkeep
+
+backend/outputs/reports/*
+!backend/outputs/reports/.gitkeep
