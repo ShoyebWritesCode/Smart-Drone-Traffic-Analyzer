@@ -107,3 +107,8 @@ def process_video(input_path, output_dir):
 
     # 5. Generate Reports
     generate_report(final_counts, frame_count, fps, report_output_dir)
+    
+    return {
+        "counts": final_counts,
+        "processed_video_filename": output_filename
+    }
