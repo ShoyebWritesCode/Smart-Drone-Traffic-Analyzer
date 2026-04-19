@@ -1,6 +1,8 @@
 import os
 import uuid
 import shutil
+import json
+from datetime import datetime
 from typing import Dict
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,6 +40,27 @@ app.mount("/static/reports", StaticFiles(directory=os.path.join(OUTPUTS_DIR, "re
 # task_store format: { "task_id": {"status": "processing" | "completed" | "failed", "data": {...}, "error": "..."} }
 task_store: Dict[str, dict] = {}
 
+DB_FILE = os.path.join(BASE_DIR, "db.json")
+
+def get_db():
+    if not os.path.exists(DB_FILE):
+        return {}
+    try:
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_to_db(task_id, data, original_filename):
+    db = get_db()
+    db[task_id] = {
+        "timestamp": datetime.now().isoformat(),
+        "original_filename": original_filename,
+        "data": data
+    }
+    with open(DB_FILE, "w") as f:
+        json.dump(db, f, indent=4)
+
 def run_ml_pipeline(task_id: str, file_path: str):
     """Background task that runs the video processing pipeline."""
     task_store[task_id]["status"] = "processing"
@@ -51,8 +74,7 @@ def run_ml_pipeline(task_id: str, file_path: str):
         result = process_video(file_path, OUTPUTS_DIR, progress_callback=update_progress)
         
         # Store the successful result
-        task_store[task_id]["status"] = "completed"
-        task_store[task_id]["data"] = {
+        task_data = {
             "counts": result["counts"],
             "processing_time": result.get("processing_time"),
             "backend_type": result.get("backend_type"),
@@ -63,6 +85,14 @@ def run_ml_pipeline(task_id: str, file_path: str):
             "csv_report_url": "/static/reports/report.csv",
             "excel_report_url": "/static/reports/report.xlsx"
         }
+        
+        task_store[task_id]["status"] = "completed"
+        task_store[task_id]["data"] = task_data
+        
+        # Persist to JSON db
+        original_filename = task_store[task_id].get("original_filename", "video.mp4")
+        save_to_db(task_id, task_data, original_filename)
+        
     except Exception as e:
         task_store[task_id]["status"] = "failed"
         task_store[task_id]["error"] = str(e)
@@ -109,5 +139,35 @@ async def get_task_status(task_id: str):
 async def health_check():
     """Simple health check endpoint."""
     return {"status": "ok"}
+
+@app.get("/api/history")
+async def get_history():
+    """Get all past analyses from the decoy DB."""
+    db = get_db()
+    history_list = []
+    for t_id, t_data in db.items():
+        history_list.append({
+            "task_id": t_id,
+            "timestamp": t_data["timestamp"],
+            "original_filename": t_data["original_filename"],
+            "total_vehicles": sum(t_data["data"].get("counts", {}).values()),
+            "data": t_data["data"]
+        })
+    # Sort newest first
+    history_list.sort(key=lambda x: x["timestamp"], reverse=True)
+    return history_list
+
+@app.delete("/api/history/{task_id}")
+async def delete_history(task_id: str):
+    """Delete a past analysis record."""
+    db = get_db()
+    if task_id not in db:
+        raise HTTPException(status_code=404, detail="History record not found")
+        
+    del db[task_id]
+    with open(DB_FILE, "w") as f:
+        json.dump(db, f, indent=4)
+        
+    return {"message": "Record deleted"}
 
 # To run: uvicorn backend.main:app --reload

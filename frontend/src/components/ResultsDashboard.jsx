@@ -14,6 +14,7 @@ export default function ResultsDashboard({ data }) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [focusEvent, setFocusEvent] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' });
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const totalVehicles = Object.values(counts).reduce((a, b) => a + b, 0);
 
@@ -91,7 +92,7 @@ export default function ResultsDashboard({ data }) {
                 {backend_type || "YOLO"}
               </div>
               <div className="px-3 py-1 rounded bg-purple-500/10 border border-purple-500/30 text-purple-400">
-                AI TIME: {processing_time}s
+                Processing Time: {processing_time}s
               </div>
             </div>
           </CardHeader>
@@ -165,7 +166,7 @@ export default function ResultsDashboard({ data }) {
         </Card>
 
         {/* Analytics Section */}
-        <Card className="flex flex-col h-full border-accent-cyan/20 bg-white/40 dark:bg-slate-950/40">
+        <Card className="flex flex-col h-full border-accent-cyan/20 bg-white/40 dark:bg-slate-950/40 relative z-30 !overflow-visible">
           <CardHeader>
             <CardTitle className="text-accent-cyan text-xl uppercase tracking-widest flex justify-between">
               ANALYTICS
@@ -197,17 +198,33 @@ export default function ResultsDashboard({ data }) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 mt-8">
-              <Button asChild variant="futuristic" className="w-full gap-2 py-6 shadow-lg shadow-accent-cyan/10">
-                <a href={`${API_BASE}${excel_report_url}`} download>
-                  <Download size={18} /> FULL EXCEL DATA
-                </a>
+            <div className="flex flex-col gap-3 mt-8 relative">
+              <Button 
+                variant="futuristic" 
+                className="w-full gap-2 py-6 shadow-lg shadow-accent-cyan/10"
+                onClick={() => setIsExportOpen(!isExportOpen)}
+              >
+                <Download size={18} /> EXPORT DATA
               </Button>
-              <Button asChild variant="outline" className="w-full gap-2 opacity-70 hover:opacity-100">
-                <a href={`${API_BASE}${csv_report_url}`} download>
-                  <Download size={18} /> RAW CSV
-                </a>
-              </Button>
+              
+              {isExportOpen && (
+                <div className="absolute top-full left-0 mt-2 w-full bg-slate-900 border border-accent-cyan/30 rounded-lg shadow-xl z-50 overflow-hidden flex flex-col">
+                  <a href={`${API_BASE}${excel_report_url}`} download className="flex items-center gap-3 p-4 hover:bg-accent-cyan/10 text-white transition-colors border-b border-white/5">
+                    <Download size={16} className="text-accent-cyan" /> 
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm">Full Excel Data</span>
+                      <span className="text-[10px] text-muted-foreground">Formatted with styles (.xlsx)</span>
+                    </div>
+                  </a>
+                  <a href={`${API_BASE}${csv_report_url}`} download className="flex items-center gap-3 p-4 hover:bg-white/5 text-slate-300 transition-colors">
+                    <Download size={16} className="text-slate-500" /> 
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm">Raw CSV</span>
+                      <span className="text-[10px] text-muted-foreground">Plain text format (.csv)</span>
+                    </div>
+                  </a>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -259,7 +276,7 @@ export default function ResultsDashboard({ data }) {
                       <td className="px-6 py-4 text-accent-cyan font-black">{formatMilliseconds(event.timestamp)}</td>
                       <td className="px-6 py-4 text-slate-600 dark:text-slate-400">F-{event.frame.toString().padStart(5, '0')}</td>
                       <td className="px-6 py-4"><span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-slate-800 dark:text-slate-200">{formatClassName(event.class_id)}</span></td>
-                      <td className="px-6 py-4 text-slate-500 tracking-tighter">TRK-{event.track_id}</td>
+                      <td className="px-6 py-4 text-slate-500 tracking-tighter">{event.track_id}</td>
                       <td className="px-6 py-4 text-accent-cyan/80 font-mono text-[10px]">{event.confidence ? `${event.confidence}%` : 'N/A'}</td>
                       <td className="px-6 py-4 text-right">
                         <span className="inline-flex items-center gap-1 text-[10px] bg-accent-cyan/20 text-accent-cyan px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
