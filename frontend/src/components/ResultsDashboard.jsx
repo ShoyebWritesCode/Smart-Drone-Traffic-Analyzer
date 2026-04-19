@@ -81,8 +81,8 @@ export default function ResultsDashboard({ data }) {
       <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-8 w-full">
         {/* Video Player Section */}
         <Card id="pro-player-container" className="p-4 border-accent-cyan/20 bg-white/40 dark:bg-slate-950/40 relative group">
-          <CardHeader className="p-0 mb-4 flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-3 text-muted-foreground text-lg uppercase tracking-wider">
+          <CardHeader className="p-0 mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-0">
+            <CardTitle className="flex items-center gap-3 text-muted-foreground text-base md:text-lg uppercase tracking-wider">
               <Activity size={20} className="text-accent-cyan animate-pulse" />
               PRECISION ANALYSIS FEED
             </CardTitle>

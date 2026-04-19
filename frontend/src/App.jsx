@@ -96,12 +96,12 @@ function AppContent() {
       <Background3D />
       
       {/* Theme Toggle Button */}
-      <div className="fixed top-8 right-8 z-50">
+      <div className="fixed top-4 right-4 md:top-8 md:right-8 z-50 scale-75 md:scale-100">
         <ModeToggle />
       </div>
 
-      <div className="app-container max-w-[1200px] mx-auto px-8 pb-16 w-full z-10 flex flex-col items-center">
-        <h1 className="title-glow">SMART DRONE TRAFFIC ANALYZER</h1>
+      <div className="app-container max-w-[1200px] mx-auto px-4 md:px-8 pb-16 w-full z-10 flex flex-col items-center mt-8 md:mt-0">
+        <h1 className="title-glow text-2xl sm:text-4xl md:text-5xl">SMART DRONE TRAFFIC ANALYZER</h1>
         
         {state === 'IDLE' && (
           <FileUploader onFileSelect={handleFileUpload} />
