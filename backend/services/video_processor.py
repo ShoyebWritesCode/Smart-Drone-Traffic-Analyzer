@@ -103,6 +103,33 @@ def process_video(input_path, output_dir):
     # Cleanup video resources
     cap.release()
     writer.release()
+    
+    # 4.5 Transcode video for HTML5 compatibility using ffmpeg
+    try:
+        import imageio_ffmpeg
+        import subprocess
+        print("Transcoding video to HTML5 compatible H.264 format...")
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        
+        # We save the transcoded file to the same location, moving the original
+        temp_path = output_video_path.replace(".mp4", "_temp.mp4")
+        os.rename(output_video_path, temp_path)
+        
+        subprocess.run([
+            ffmpeg_exe, 
+            '-y', 
+            '-i', temp_path, 
+            '-vcodec', 'libx264', 
+            '-preset', 'fast',
+            output_video_path
+        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        # Remove the temporary non-HTML5 file
+        os.remove(temp_path)
+        print("Transcoding complete.")
+    except Exception as e:
+        print(f"Warning: Failed to transcode video. It may not play in web browsers. Error: {e}")
+
     print(f"Video processing complete. Saved to: {output_video_path}")
 
     # 5. Generate Reports
