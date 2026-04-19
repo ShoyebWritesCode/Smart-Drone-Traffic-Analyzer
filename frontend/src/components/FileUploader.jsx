@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
 import { Card } from "@/components/ui/card"
+import { toast } from 'sonner';
 
 export default function FileUploader({ onFileSelect }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -25,7 +26,7 @@ export default function FileUploader({ onFileSelect }) {
       if (file.type.startsWith('video/')) {
         onFileSelect(file);
       } else {
-        alert('Please upload a valid video file.');
+        toast.error('Invalid file format. Please upload a .mp4, .avi, or .mov video file.');
       }
     }
   }, [onFileSelect]);

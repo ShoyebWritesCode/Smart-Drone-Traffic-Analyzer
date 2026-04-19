@@ -4,11 +4,12 @@ import FileUploader from '@/components/FileUploader';
 import StatusIndicator from '@/components/StatusIndicator';
 import ResultsDashboard from '@/components/ResultsDashboard';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { AlertTriangle, RefreshCcw, History, Trash2, ArrowRight } from 'lucide-react';
+import { AlertTriangle, RefreshCcw, History, Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ModeToggle } from "@/components/mode-toggle"
+import { Toaster, toast } from 'sonner';
 
 const API_BASE = "/api";
 
@@ -20,6 +21,7 @@ function AppContent() {
   const [progress, setProgress] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
   const [historyList, setHistoryList] = useState([]);
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState(null);
 
   const fetchHistory = async () => {
     try {
@@ -27,9 +29,12 @@ function AppContent() {
       if (response.ok) {
         const data = await response.json();
         setHistoryList(data);
+      } else {
+        toast.error("Failed to load history data.");
       }
     } catch (err) {
       console.error("Failed to fetch history:", err);
+      toast.error("Cannot connect to server to load history.");
     }
   };
 
@@ -50,10 +55,16 @@ function AppContent() {
 
   const deleteHistoryItem = async (taskId) => {
     try {
-      await fetch(`${API_BASE}/history/${taskId}`, { method: 'DELETE' });
-      fetchHistory(); // refresh the list
+      const response = await fetch(`${API_BASE}/history/${taskId}`, { method: 'DELETE' });
+      if (response.ok) {
+        toast.success("Analysis permanently deleted.");
+        fetchHistory(); // refresh the list
+      } else {
+        toast.error("Failed to delete record.");
+      }
     } catch (err) {
       console.error("Failed to delete record:", err);
+      toast.error("Network error while deleting record.");
     }
   };
 
@@ -173,7 +184,7 @@ function AppContent() {
                       </div>
                     </div>
                     <div className="flex gap-2 w-full md:w-auto justify-end">
-                      <Button variant="destructive" size="icon" onClick={() => deleteHistoryItem(item.task_id)}>
+                      <Button variant="destructive" size="icon" onClick={() => setDeleteConfirmationId(item.task_id)}>
                         <Trash2 size={16} />
                       </Button>
                       <Button variant="default" className="gap-2 bg-accent-cyan text-slate-950 hover:bg-accent-cyan/80" onClick={() => loadHistoryItem(item.data)}>
@@ -184,6 +195,29 @@ function AppContent() {
                 ))
               )}
             </div>
+            
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmationId && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <Card className="w-[400px] border-destructive/50 bg-slate-950 p-6 shadow-2xl shadow-destructive/20 relative">
+                  <h3 className="text-xl font-bold text-destructive flex items-center gap-2 mb-4">
+                    <AlertTriangle /> Confirm Deletion
+                  </h3>
+                  <p className="text-slate-300 mb-6">
+                    Are you sure you want to permanently delete this analysis record? This action cannot be undone.
+                  </p>
+                  <div className="flex justify-end gap-3">
+                    <Button variant="outline" onClick={() => setDeleteConfirmationId(null)}>Cancel</Button>
+                    <Button variant="destructive" onClick={() => {
+                      deleteHistoryItem(deleteConfirmationId);
+                      setDeleteConfirmationId(null);
+                    }}>
+                      Delete
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            )}
           </Card>
         )}
 
@@ -194,7 +228,7 @@ function AppContent() {
         {state === 'COMPLETED' && resultsData && (
           <div className="w-full">
             <Button variant="outline" onClick={resetSystem} className="mb-4 gap-2">
-              &larr; SCAN NEW AREA
+              <ArrowLeft size={16} /> SCAN NEW AREA
             </Button>
             <ResultsDashboard data={resultsData} />
           </div>
@@ -218,6 +252,7 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="drone-analyzer-theme">
+      <Toaster position="top-center" richColors theme="system" />
       <AppContent />
     </ThemeProvider>
   );
