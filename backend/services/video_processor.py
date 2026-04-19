@@ -1,5 +1,8 @@
 import os
 import cv2
+import time
+from threading import Thread
+from queue import Queue
 
 # Import modules from services and utils
 from .detection import get_model
@@ -14,14 +17,51 @@ from backend.utils.video_utils import (
     create_video_writer
 )
 
+class ThreadedVideoReader:
+    """
+    Reads video frames in a background thread so disk I/O 
+    never blocks the main inference loop.
+    """
+    def __init__(self, path, queue_size=128):
+        self.cap = cv2.VideoCapture(path)
+        if not self.cap.isOpened():
+            raise RuntimeError(f"Failed to open video: {path}")
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 3)
+        self.queue = Queue(maxsize=queue_size)
+        self.stopped = False
+
+    def start(self):
+        thread = Thread(target=self._read, daemon=True)
+        thread.start()
+        return self
+
+    def _read(self):
+        while not self.stopped:
+            if not self.queue.full():
+                ret, frame = self.cap.read()
+                if not ret:
+                    self.stopped = True
+                    return
+                self.queue.put(frame)
+            else:
+                time.sleep(0.01)
+
+    def read(self):
+        return self.queue.get()
+
+    def running(self):
+        return not self.stopped or not self.queue.empty()
+
+    def get(self, prop):
+        return self.cap.get(prop)
+
+    def release(self):
+        self.stopped = True
+        self.cap.release()
+
 def process_video(input_path, output_dir, progress_callback=None):
     """
     Main pipeline orchestrator for video processing.
-    
-    Args:
-        input_path (str): Path to the input video file.
-        output_dir (str): Directory where outputs (videos and reports) will be saved.
-        progress_callback (callable): Optional function to report progress percentage (0-100).
     """
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input video not found: {input_path}")
@@ -32,61 +72,60 @@ def process_video(input_path, output_dir, progress_callback=None):
     os.makedirs(video_output_dir, exist_ok=True)
     os.makedirs(report_output_dir, exist_ok=True)
 
-    # Initialize video capture
-    cap = cv2.VideoCapture(input_path)
-    if not cap.isOpened():
-        raise RuntimeError(f"Failed to open video: {input_path}")
+    # Initialize threaded video reader
+    reader = ThreadedVideoReader(input_path)
 
     # Video properties
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    orig_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    orig_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    total_frames_in_video = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = reader.get(cv2.CAP_PROP_FPS)
+    orig_width = int(reader.get(cv2.CAP_PROP_FRAME_WIDTH))
+    orig_height = int(reader.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total_frames_in_video = int(reader.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # Optimization: Resize dimensions (e.g., width=640 for YOLOv8n)
+    # Optimization: Resize dimensions
     target_width = 640
     r = target_width / float(orig_width)
     target_height = int(orig_height * r)
 
-    # Define counting line at the middle of the resized frame
+    # Define counting line
     counting_line_y = int(target_height * 0.6)
     init_counter(counting_line_y)
 
     # Output video writer
-    output_filename = "processed_" + os.path.basename(input_path)
+    output_filename = "processed_" + os.path.basename(input_path).replace(" ", "_")
     output_video_path = os.path.join(video_output_dir, output_filename)
     writer = create_video_writer(output_video_path, fps, target_width, target_height)
 
-    # Pre-load model to avoid loading time during frame loop
-    print("Loading YOLO model...")
+    # Pre-load model
     get_model()
 
     print(f"Processing video: {input_path}")
-    print(f"Original size: {orig_width}x{orig_height}, Resized to: {target_width}x{target_height}")
+    print(f"Optimization: Threaded frame reading & OpenVINO (if available) enabled")
 
     frame_count = 0
     final_counts = {}
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
+    # Start the background frame reader
+    reader.start()
+    
+    # Start timer
+    start_time = time.time()
+
+    while reader.running():
+        try:
+            frame = reader.read()
+        except:
             break
 
         frame_count += 1
-        
-        # Optimization: Frame skipping (e.g., process every 2nd frame)
-        # Uncomment below to implement frame skipping for even faster CPU processing
-        # if frame_count % 2 != 0:
-        #     continue
 
-        # Resize frame for CPU optimization
+        # Resize frame
         frame = resize_frame(frame, width=target_width)
 
-        # 1. & 2. Run Detection & Tracking (Combined via YOLO ByteTrack)
+        # 1. & 2. Run Detection & Tracking
         tracked_objects = run_tracking(frame)
 
         # 3. Run Counting
-        current_counts = run_counting(tracked_objects)
+        current_counts = run_counting(tracked_objects, frame_count, fps)
         final_counts = current_counts
 
         # 4. Draw overlays
@@ -97,51 +136,60 @@ def process_video(input_path, output_dir, progress_callback=None):
         # Write processed frame
         writer.write(frame)
 
-        # Optional: Print progress every 100 frames
+        # Print progress every 100 frames
         if frame_count % 100 == 0:
             print(f"Processed {frame_count}/{total_frames_in_video} frames...")
             
-        # Report progress every 5 frames
+        # Report progress
         if progress_callback and total_frames_in_video > 0 and frame_count % 5 == 0:
             percentage = min(99, int((frame_count / total_frames_in_video) * 100))
             progress_callback(percentage)
 
-    # Cleanup video resources
-    cap.release()
+    # Calculate processing time
+    processing_time = round(time.time() - start_time, 2)
+    print(f"Analysis complete in {processing_time} seconds.")
+
+    # Cleanup
+    reader.release()
     writer.release()
     
-    # 4.5 Transcode video for HTML5 compatibility using ffmpeg
+    # Transcode video
     try:
         import imageio_ffmpeg
         import subprocess
-        print("Transcoding video to HTML5 compatible H.264 format...")
+        print("Transcoding video for browser compatibility...")
         ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-        
-        # We save the transcoded file to the same location, moving the original
         temp_path = output_video_path.replace(".mp4", "_temp.mp4")
         os.rename(output_video_path, temp_path)
         
         subprocess.run([
-            ffmpeg_exe, 
-            '-y', 
-            '-i', temp_path, 
+            ffmpeg_exe, '-y', '-i', temp_path, 
             '-vcodec', 'libx264', 
+            '-pix_fmt', 'yuv420p', # Critical for many browsers
             '-preset', 'fast',
             output_video_path
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
-        # Remove the temporary non-HTML5 file
         os.remove(temp_path)
         print("Transcoding complete.")
     except Exception as e:
-        print(f"Warning: Failed to transcode video. It may not play in web browsers. Error: {e}")
+        print(f"Warning: Transcoding failed: {e}")
 
-    print(f"Video processing complete. Saved to: {output_video_path}")
-
-    # 5. Generate Reports
-    generate_report(final_counts, frame_count, fps, report_output_dir)
+    # Generate Reports
+    from .counting import get_detection_events
+    events = get_detection_events()
+    generate_report(final_counts, frame_count, fps, report_output_dir, events, processing_time)
     
+    # Determine backend hardware for reporting
+    from .detection import MODEL_NAME
+    import torch
+    device_name = "GPU (CUDA)" if torch.cuda.is_available() else "CPU"
+    backend_type = f"{MODEL_NAME.upper()} ({device_name})"
+
     return {
         "counts": final_counts,
-        "processed_video_filename": output_filename
+        "processed_video_filename": output_filename,
+        "processing_time": processing_time,
+        "backend_type": backend_type,
+        "events": events
     }

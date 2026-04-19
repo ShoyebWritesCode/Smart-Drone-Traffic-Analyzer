@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import Background3D from './components/Background3D';
-import FileUploader from './components/FileUploader';
-import StatusIndicator from './components/StatusIndicator';
-import ResultsDashboard from './components/ResultsDashboard';
-import ErrorBoundary from './components/ErrorBoundary';
-import { AlertTriangle } from 'lucide-react';
+import Background3D from '@/components/Background3D';
+import FileUploader from '@/components/FileUploader';
+import StatusIndicator from '@/components/StatusIndicator';
+import ResultsDashboard from '@/components/ResultsDashboard';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { AlertTriangle, RefreshCcw } from 'lucide-react';
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { ThemeProvider } from "@/components/theme-provider"
+import { ModeToggle } from "@/components/mode-toggle"
 
-// Using proxy in vite config, so API base is just relative
 const API_BASE = "/api";
 
-function App() {
+function AppContent() {
   const [state, setState] = useState('IDLE'); // IDLE, UPLOADING, PROCESSING, COMPLETED, ERROR
   const [taskId, setTaskId] = useState(null);
   const [resultsData, setResultsData] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
-
   const [progress, setProgress] = useState(0);
 
   const handleFileUpload = async (file) => {
@@ -68,7 +70,6 @@ function App() {
         } else if (data.status === 'failed') {
           throw new Error(data.error || 'ML Pipeline encountered a critical failure.');
         }
-        // If 'processing' or 'pending', do nothing, let interval continue
       } catch (err) {
         setErrorMsg(err.message || 'Connection to tracking core lost.');
         setState('ERROR');
@@ -77,7 +78,6 @@ function App() {
     };
 
     if (state === 'PROCESSING') {
-      // Poll every 3 seconds
       intervalId = setInterval(checkStatus, 3000);
     }
 
@@ -95,7 +95,12 @@ function App() {
     <ErrorBoundary>
       <Background3D />
       
-      <div className="app-container">
+      {/* Theme Toggle Button */}
+      <div className="fixed top-8 right-8 z-50">
+        <ModeToggle />
+      </div>
+
+      <div className="app-container max-w-[1200px] mx-auto px-8 pb-16 w-full z-10 flex flex-col items-center">
         <h1 className="title-glow">SMART DRONE ANALYZER</h1>
         
         {state === 'IDLE' && (
@@ -107,26 +112,34 @@ function App() {
         )}
         
         {state === 'COMPLETED' && resultsData && (
-          <div style={{ width: '100%' }}>
-            <button className="btn" onClick={resetSystem} style={{ marginBottom: '1rem' }}>
+          <div className="w-full">
+            <Button variant="outline" onClick={resetSystem} className="mb-4 gap-2">
               &larr; SCAN NEW AREA
-            </button>
+            </Button>
             <ResultsDashboard data={resultsData} />
           </div>
         )}
         
         {state === 'ERROR' && (
-           <div className="glass-panel error-box" style={{ maxWidth: '600px', width: '100%' }}>
-           <AlertTriangle size={64} className="error-icon" />
-           <h2 style={{ color: '#ef4444', marginBottom: '1rem' }}>CONNECTION LOST</h2>
-           <p className="error-text">{errorMsg}</p>
-           <button className="btn" onClick={resetSystem}>
-             RETRY TRANSMISSION
-           </button>
-         </div>
+           <Card className="w-full max-w-[600px] border-destructive/50 bg-destructive/5 p-12 text-center">
+             <AlertTriangle size={64} className="text-destructive mx-auto mb-6 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
+             <h2 className="text-destructive text-2xl font-bold mb-4 uppercase tracking-wider">CONNECTION LOST</h2>
+             <p className="text-destructive/80 mb-8">{errorMsg}</p>
+             <Button variant="destructive" onClick={resetSystem} className="gap-2">
+               <RefreshCcw size={18} /> RETRY TRANSMISSION
+             </Button>
+           </Card>
         )}
       </div>
     </ErrorBoundary>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider defaultTheme="dark" storageKey="drone-analyzer-theme">
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

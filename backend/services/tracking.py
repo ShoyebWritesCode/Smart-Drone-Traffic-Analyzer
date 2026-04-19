@@ -14,7 +14,11 @@ def run_tracking(frame):
         persist=True, 
         classes=ALLOWED_CLASSES, 
         tracker="bytetrack.yaml", 
-        verbose=False
+        verbose=False,
+        conf=0.3,      # Filter low-confidence detections early
+        iou=0.5,       # NMS IoU threshold
+        imgsz=640,     # Let YOLO handle its own optimal resize
+        half=False,    # Set True if you have a CUDA GPU for ~1.5x speedup
     )
     
     tracked_objects = []

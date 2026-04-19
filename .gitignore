@@ -49,6 +49,8 @@ env/
 
 # --- Machine Learning / YOLO ---
 *.pt
+*.onnx
+*_openvino_model/
 runs/
 
 # --- Project Specific Data ---

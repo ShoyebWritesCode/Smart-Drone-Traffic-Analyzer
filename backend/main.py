@@ -54,6 +54,9 @@ def run_ml_pipeline(task_id: str, file_path: str):
         task_store[task_id]["status"] = "completed"
         task_store[task_id]["data"] = {
             "counts": result["counts"],
+            "processing_time": result.get("processing_time"),
+            "backend_type": result.get("backend_type"),
+            "events": result.get("events", []),
             # Provide URLs relative to the static mount points
             "processed_video_url": f"/static/videos/{result['processed_video_filename']}",
             "csv_report_url": "/static/reports/report.csv",

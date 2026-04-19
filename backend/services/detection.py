@@ -8,22 +8,27 @@ _model = None
 # 2: car, 3: motorcycle, 5: bus, 7: truck
 ALLOWED_CLASSES = [2, 3, 5, 7]
 
+# Model configuration
+MODEL_NAME = 'yolo11n'  # Stable and fast version for CPU efficiency
+
 def get_model():
-    """Load and return the YOLO model (singleton)."""
+    """
+    Load and return the YOLO model (singleton).
+    Uses the standard PyTorch (.pt) format.
+    """
     global _model
     if _model is None:
-        # Use YOLOv8n (nano) for lightweight CPU inference
-        _model = YOLO('yolov8n.pt')
+        print(f"Loading YOLO model: {MODEL_NAME}.pt...")
+        _model = YOLO(f'{MODEL_NAME}.pt')
+    
     return _model
 
 def run_detection(frame):
     """
     Run object detection on a single frame.
-    (Note: If using YOLO's built-in tracking, this standalone detection 
-    is often skipped in favor of model.track(), but provided here for modularity).
     """
     model = get_model()
-    # Run inference, filtering only vehicle classes, optimized for CPU
+    # Run inference, filtering only vehicle classes
     results = model.predict(frame, classes=ALLOWED_CLASSES, verbose=False)
     
     detections = []
