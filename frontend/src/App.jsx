@@ -15,9 +15,12 @@ function App() {
   const [resultsData, setResultsData] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const [progress, setProgress] = useState(0);
+
   const handleFileUpload = async (file) => {
     setState('UPLOADING');
     setErrorMsg('');
+    setProgress(0);
     
     const formData = new FormData();
     formData.append('file', file);
@@ -53,6 +56,10 @@ function App() {
         if (!response.ok) throw new Error('Status check failed.');
         
         const data = await response.json();
+        
+        if (data.progress !== undefined) {
+          setProgress(data.progress);
+        }
         
         if (data.status === 'completed') {
           setResultsData(data.data);
@@ -96,7 +103,7 @@ function App() {
         )}
         
         {(state === 'UPLOADING' || state === 'PROCESSING') && (
-          <StatusIndicator status={state} />
+          <StatusIndicator status={state} progress={progress} />
         )}
         
         {state === 'COMPLETED' && resultsData && (

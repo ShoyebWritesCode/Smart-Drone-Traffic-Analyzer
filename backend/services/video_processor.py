@@ -14,13 +14,14 @@ from backend.utils.video_utils import (
     create_video_writer
 )
 
-def process_video(input_path, output_dir):
+def process_video(input_path, output_dir, progress_callback=None):
     """
     Main pipeline orchestrator for video processing.
     
     Args:
         input_path (str): Path to the input video file.
         output_dir (str): Directory where outputs (videos and reports) will be saved.
+        progress_callback (callable): Optional function to report progress percentage (0-100).
     """
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input video not found: {input_path}")
@@ -99,6 +100,11 @@ def process_video(input_path, output_dir):
         # Optional: Print progress every 100 frames
         if frame_count % 100 == 0:
             print(f"Processed {frame_count}/{total_frames_in_video} frames...")
+            
+        # Report progress every 5 frames
+        if progress_callback and total_frames_in_video > 0 and frame_count % 5 == 0:
+            percentage = min(99, int((frame_count / total_frames_in_video) * 100))
+            progress_callback(percentage)
 
     # Cleanup video resources
     cap.release()

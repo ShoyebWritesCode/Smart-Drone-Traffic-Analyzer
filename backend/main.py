@@ -41,9 +41,14 @@ task_store: Dict[str, dict] = {}
 def run_ml_pipeline(task_id: str, file_path: str):
     """Background task that runs the video processing pipeline."""
     task_store[task_id]["status"] = "processing"
+    task_store[task_id]["progress"] = 0
+    
+    def update_progress(pct: int):
+        task_store[task_id]["progress"] = pct
+
     try:
         # Run the heavy ML pipeline
-        result = process_video(file_path, OUTPUTS_DIR)
+        result = process_video(file_path, OUTPUTS_DIR, progress_callback=update_progress)
         
         # Store the successful result
         task_store[task_id]["status"] = "completed"
