@@ -34,6 +34,7 @@ class CountingLogic:
         for obj in tracked_objects:
             track_id = obj['track_id']
             class_id = obj['class_id']
+            confidence = obj.get('confidence', 0.0)
             x1, y1, x2, y2 = obj['bbox']
             
             # Calculate the center y-coordinate of the bounding box
@@ -60,8 +61,10 @@ class CountingLogic:
                     self.events.append({
                         'track_id': track_id,
                         'class_id': class_id,
+                        'confidence': round(confidence * 100, 1),
                         'frame': frame_number,
-                        'timestamp': timestamp
+                        'timestamp': timestamp,
+                        'bbox': [int(x1), int(y1), int(x2), int(y2)]
                     })
         
         # Update previous y positions for the next frame

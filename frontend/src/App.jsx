@@ -101,7 +101,7 @@ function AppContent() {
       </div>
 
       <div className="app-container max-w-[1200px] mx-auto px-8 pb-16 w-full z-10 flex flex-col items-center">
-        <h1 className="title-glow">SMART DRONE ANALYZER</h1>
+        <h1 className="title-glow">SMART DRONE TRAFFIC ANALYZER</h1>
         
         {state === 'IDLE' && (
           <FileUploader onFileSelect={handleFileUpload} />

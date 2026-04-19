@@ -16,7 +16,7 @@ def run_tracking(frame):
         tracker="bytetrack.yaml", 
         verbose=False,
         conf=0.3,      # Filter low-confidence detections early
-        iou=0.5,       # NMS IoU threshold
+        iou=0.7,       # NMS IoU threshold (Higher = allows more overlapping boxes)
         imgsz=640,     # Let YOLO handle its own optimal resize
         half=False,    # Set True if you have a CUDA GPU for ~1.5x speedup
     )

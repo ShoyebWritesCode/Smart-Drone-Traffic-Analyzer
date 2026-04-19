@@ -48,12 +48,12 @@ def draw_counting_line(frame, line_y):
 def draw_counts(frame, counts):
     """Draw the current counts on the frame."""
     y_offset = 30
-    cv2.putText(frame, "Counts:", (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    cv2.putText(frame, "Counts:", (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
     
     for cls_id, count in counts.items():
         y_offset += 30
         label = f"Class {cls_id}: {count}"
-        cv2.putText(frame, label, (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        cv2.putText(frame, label, (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
     
     return frame
 

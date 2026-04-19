@@ -50,11 +50,12 @@ def generate_report(counts, total_frames, fps, output_dir, events=None, processi
                 "Timestamp (s)": event['timestamp'],
                 "Frame Number": event['frame'],
                 "Vehicle Type": class_names.get(event['class_id'], f"Class {event['class_id']}"),
-                "Unique Track ID": event['track_id']
+                "Unique Track ID": event['track_id'],
+                "Confidence": f"{event.get('confidence', 0)}%"
             })
         df_log = pd.DataFrame(log_data)
     else:
-        df_log = pd.DataFrame(columns=["Timestamp (s)", "Frame Number", "Vehicle Type", "Unique Track ID"])
+        df_log = pd.DataFrame(columns=["Timestamp (s)", "Frame Number", "Vehicle Type", "Unique Track ID", "Confidence"])
 
     # Output paths
     csv_path = os.path.join(output_dir, "report.csv")

@@ -191,5 +191,9 @@ def process_video(input_path, output_dir, progress_callback=None):
         "processed_video_filename": output_filename,
         "processing_time": processing_time,
         "backend_type": backend_type,
-        "events": events
+        "events": events,
+        "video_dimensions": {
+            "width": target_width,
+            "height": target_height
+        }
     }
