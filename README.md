@@ -1,7 +1,5 @@
 # 🚁 Smart Drone Traffic Analyzer
 
-![Dashboard Mockup](./frontend/public/vite.svg)
-
 A high-performance, edge-capable Computer Vision application designed to analyze aerial drone footage, track moving vehicles, and generate frame-accurate data reports. 
 
 Built with a **React + Tailwind** frontend and a **FastAPI + YOLOv11** backend, this system is optimized for real-time tracking, aesthetic UI design, and robust data exports.
@@ -206,7 +204,7 @@ npm install
 # Start the Vite development server
 npm run dev
 ```
-*The frontend will now be running on http://localhost:5173*
+*The frontend will now be running on http://localhost:3000*
 
 ### 4. Usage
 1. Open the frontend in your browser.
@@ -215,14 +213,3 @@ npm run dev
 4. Interact with the generated "Precision Analysis Feed".
 5. Export your data as a beautifully formatted `.xlsx` or raw `.csv`.
 6. Use the "View Past Analyses" button to load old records from the Decoy Database!
-
----
-
-## ☁️ Production Deployment Recommendations
-
-If you plan to deploy this application to a cloud provider (AWS/GCP), the following architectural upgrades are strongly recommended:
-
-1.  **Message Queue:** Swap `fastapi.BackgroundTasks` for **Celery + Redis**. BackgroundTasks run in the same memory space as the web server. Under heavy concurrent video uploads, the server will crash. Celery allows video processing to be offloaded to dedicated GPU-backed worker nodes.
-2.  **Storage:** Swap local file storage (`/uploads`, `/outputs`) for **AWS S3**. Local files will be lost when cloud containers restart.
-3.  **Database:** Swap `db.json` for a managed **PostgreSQL** instance to handle concurrent read/writes.
-4.  **Reverse Proxy:** Place the backend behind an **Nginx** or **Traefik** load balancer to handle SSL termination and protect against timeout limits common in heavy video processing APIs.
