@@ -23,7 +23,7 @@ Built with a **React + Tailwind** frontend and a **FastAPI + YOLOv11** backend, 
 ### Frontend (Client-Side)
 *   **Framework:** React 18 (Vite)
 *   **Styling:** Tailwind CSS + custom glassmorphism utilities (`index.css`)
-*   **Components:** Radix UI primitives / shadcn-like patterns
+*   **Components:** Radix UI primitives
 *   **Icons & Toasts:** Lucide React, Sonner (for non-blocking UI alerts)
 *   **State Management:** React Hooks (`useState`, `useEffect`, `useRef`)
 
@@ -106,21 +106,21 @@ smart-drone-traffic-analyzer/
 The core ML pipeline is driven by **YOLOv11 Nano** coupled with the **ByteTrack** algorithm. 
 
 ### 1. The Virtual Tripwire (Counting Logic)
-We implemented a unidirectional virtual tripwire. 
+I implemented a unidirectional virtual tripwire. 
 *   **Placement:** A horizontal line is drawn at 60% of the video's vertical height (`y = int(h * 0.6)`). 
 *   **Trigger:** As vehicles move down the frame, their center coordinates `(cx, cy)` are calculated. If the previous frame's `cy` was *above* the line, and the current frame's `cy` is *below* the line, a count is triggered.
 
 ### 2. Defeating Double-Counting
 A common flaw in rudimentary trackers is double-counting a vehicle if it hesitates on the line or if the bounding box flickers. 
-*   **The Fix:** We maintain a set of counted trackers: `self.counted_ids = set()`. Once a ByteTrack unique ID successfully crosses the line, it is permanently logged into this set. The system enforces an `if track_id not in self.counted_ids:` check before incrementing the counter, making double-counting physically impossible for a stable track.
+*   **The Fix:** I maintain a set of counted trackers: `self.counted_ids = set()`. Once a ByteTrack unique ID successfully crosses the line, it is permanently logged into this set. The system enforces an `if track_id not in self.counted_ids:` check before incrementing the counter, making double-counting physically impossible for a stable track.
 
 ### 3. Tuning Non-Maximum Suppression (NMS)
 When drones film from a top-down angle, large vehicles in parallel lanes (e.g., a bus passing a truck) will have heavily overlapping bounding boxes from the 2D camera's perspective. By default, YOLO's NMS filter deletes overlapping boxes, assuming they are duplicate detections of the same object.
-*   **The Fix:** We aggressively increased the tracking NMS IoU threshold (`iou=0.85`). This instructs the AI to allow bounding boxes to overlap by up to 85% before suppressing one, ensuring both vehicles are tracked independently.
+*   **The Fix:** I increased the tracking NMS IoU threshold (`iou=0.7`). This instructs the AI to allow bounding boxes to overlap significantly before suppressing one, ensuring vehicles in close proximity are tracked independently.
 
 ### 4. Handling Occlusion (Hidden Vehicles)
 If a truck partially blocks a motorcycle, the AI's confidence in the motorcycle drops. If it drops below the threshold, the track is lost.
-*   **The Fix:** We lowered the base detection confidence (`conf=0.15`). We rely on ByteTrack's multi-stage association (which uses low-confidence detections specifically to recover lost tracks) to keep the hidden vehicle alive. 
+*   **The Fix:** I balanced the base detection confidence (`conf=0.3`). I rely on ByteTrack's multi-stage association to recover lost tracks while maintaining high precision. 
 
 ---
 
@@ -129,7 +129,7 @@ If a truck partially blocks a motorcycle, the AI's confidence in the motorcycle 
 The frontend is governed by a strict state machine inside `App.jsx`:
 `['IDLE', 'UPLOADING', 'PROCESSING', 'COMPLETED', 'ERROR']`
 
-*   **Glassmorphism Engine:** We utilized complex Tailwind gradients (`bg-slate-900/40 backdrop-blur-xl`) alongside an animated CSS shine effect (`index.css: .glass-panel::before`) to create a "Cyber-City" aesthetic.
+*   **Glassmorphism Engine:** I utilized complex Tailwind gradients (`bg-slate-900/40 backdrop-blur-xl`) alongside an animated CSS shine effect (`index.css: .glass-panel::before`) to create a "Cyber-City" aesthetic.
 *   **Focus Mode SVG Masking:** In the `ResultsDashboard`, when a user clicks a detection log, the app reads the `[x1, y1, x2, y2]` bounding box coordinates from the backend data. It dynamically generates an `<svg><mask/></svg>` element overlaid on the video player, instantly plunging the screen into darkness while spotlighting only the targeted vehicle.
 *   **Mobile Responsiveness:** The UI grid heavily utilizes `flex-col md:flex-row` directives. Data tables are wrapped in `overflow-x-auto` to allow horizontal swiping on mobile devices without breaking the flex layout.
 
@@ -159,7 +159,7 @@ Permanently removes an analysis record from the database.
 
 1.  **Perspective & Altitude:** The system assumes the drone is hovering stationary or moving extremely slowly, pointing downwards at an angle parallel to the flow of traffic. Heavy camera rotation will break the static virtual tripwire.
 2.  **Hardware Profiling:** The system defaults to CPU inference using the `yolo11n.pt` (Nano) model to ensure the project runs locally on standard laptops. If a CUDA-enabled NVIDIA GPU is detected, PyTorch will automatically accelerate it, allowing for larger models (`yolo11m.pt`) to be used without severe latency penalties.
-3.  **Decoy Database vs. SQL:** We utilized a flat `db.json` file to store historical analysis records. This allows users to test database capabilities (fetching history, deleting records) without the friction of installing PostgreSQL or Docker. It is entirely sufficient for prototyping, though a production app would migrate this logic to an ORM (like SQLAlchemy).
+3.  **Decoy Database vs. SQL:** I utilized a flat `db.json` file to store historical analysis records. This allows users to test database capabilities (fetching history, deleting records) without the friction of installing PostgreSQL or Docker. It is entirely sufficient for prototyping, though a production app would migrate this logic to an ORM (like SQLAlchemy).
 
 ---
 
